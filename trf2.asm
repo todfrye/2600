@@ -220,7 +220,7 @@ loop1
     lsr
     sec
     adc 	P0XPos,x
-	cmp #120
+	cmp #10
 	bcc	.okx   ;blt
 	lda #0
 .okx
