@@ -117,6 +117,7 @@ TIMD1K	EQU		$297			; CLOCK / 1024 dc.b  16    ; 0
 
 audio_count ds 2
 audio_step  ds 2
+frame   ds 1
 
 
 
@@ -146,9 +147,9 @@ CLP		STA	$0,X	; CLEAR STELLA & RAM
         lda #0
         sta SNDC0
 
-    lda #$0
+    lda #0
     sta audio_step
-    lda #12
+    lda #4
     sta audio_step+1
 
 ;VSYNC time
@@ -161,12 +162,15 @@ MainLoop
         lda audio_count
         adc audio_step 
         sta audio_count
-        txa
-        adc audio_step +1
-        sta audio_count +1
+        lda audio_count+1
+        adc audio_step+1
+        sta audio_count+1
         
 
         sta WSYNC
+        ldx frame 
+        inx
+        stx frame
         nop
         nop
         nop
@@ -246,7 +250,7 @@ SineWave
  dc.b  15    ; 61
  dc.b  15    ; 62
  dc.b  15    ; 63
- dc.b  16    ; 64
+ dc.b  15    ; 64
  dc.b  15    ; 65
  dc.b  15    ; 66
  dc.b  15    ; 67
