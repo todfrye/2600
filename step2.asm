@@ -116,6 +116,9 @@ TIMD1K	EQU		$297			; CLOCK / 1024
 RAND		DS	1		
 RANDH		DS	1
 FRAME       DS  1
+STATE       DS  1
+SUBSTATE    DS  1
+BUTTON      DS  1
 
 P0Idx   DS 1
 P0Vect  DS 2
@@ -161,13 +164,9 @@ CLP		STA	$0,X	; CLEAR STELLA & RAM
 	STA COLUP0
 
 
-    LDA #(P01>>8)
-    STA P0Vect+1
+
     
-    LDA #(P11>>8)
-    STA P1Vect+1
-    
-        LDA     RAND		
+    LDA     RAND		
     STA BKCLR
     
     lda #25 
@@ -200,14 +199,71 @@ RANDOM
 	ROL	RANDH
 
 	INC 	FRAME
-    lda     FPCTL
-    and     #01
-    bne    .noreset
-    LDA     RAND		
-    STA BKCLR
     
+    lda     FPCTL
+    TAX
+    and     #02
+    bne    .noreset
+    LDA     BUTTON
+    AND     #02
+    BEQ     .noreset
+    INC     STATE
 .noreset
 
+
+    LDA STATE
+    CMP #2
+    BNE .noloop
+    LDA #0
+    STA STATE
+    
+.noloop
+    CMP #1
+    BNE .next1
+    JMP ML1 
+.next1
+    JMP ML2
+    
+    
+ML2   
+    STX     BUTTON
+    JMP ML_SUB 
+
+    
+    
+    
+ML_SUB
+.waitunderscan
+	LDA INTIM	
+	BNE .waitunderscan	
+	LDY #96 	            ;count down lines
+	STA WSYNC
+	STA VBLANK
+
+.kern1
+    STA WSYNC
+    STA WSYNC
+    DEY
+    BNE .kern1
+
+
+
+    LDA  #$24       ;set timer for overscan
+	STA  TIM64T
+	LDA  #$02       ;clear the screen and turn off the video
+	STA  WSYNC
+
+	STA  VBLANK
+.waitoverscan
+	LDA INTIM	
+	BNE     .waitoverscan
+	JMP     MainLoop
+    
+
+
+
+ML1
+    STX     BUTTON
 	LDA 	#$0
 	STA 	P0GR
 	LDA 	FRAME
@@ -279,6 +335,12 @@ loop1
     lda #10
     sta P1YPos
     
+    
+    LDA #(P01>>8)
+    STA P0Vect+1
+    
+    LDA #(P11>>8)
+    STA P1Vect+1
 
 	LDA    	P0XPos+5
 	STA	    P0Tmp

@@ -163,7 +163,7 @@ CLP		STA	$0,X	; CLEAR STELLA & RAM
         
         LDA #$ff
         STA     BUTTON
-    JMP MainLoop
+    JMP MLV2
     
     
 BASIC_FRAME
@@ -176,9 +176,7 @@ BASIC_FRAME
 	STA  TIM64T	
 	LDA #0		
 	STA  VSYNC
-    
 ; RANDOM NUMBER GENERATOR
-
 	LDA	RAND
 	ROR
 	ROR
@@ -219,6 +217,34 @@ EOS SUBROUTINE
 	LDA INTIM	
 	BNE     .waitoverscan
     RTS
+
+
+P0SetPos SUBROUTINE
+
+        STA WSYNC       ;3 begin line 1
+        clc             ;2
+        NOP
+.DivideLoop
+        SBC #15        ;2
+        BCS .DivideLoop ;54 max   
+        EOR #7         ;2
+        ASL            ;2
+        ASL            ;2
+        ASL            ;2
+        ASL            ;2 -Shift left 4 places
+        sta HMP0,X     ;4     68
+        sta P0RES,X    ;4     72
+        sta WSYNC
+        sta HMOVE
+        ldx #8
+.dumbwait
+        dex
+        bpl  .dumbwait
+        
+
+        sta CLRHM
+        RTS
+        
 
 ; basic pinstripe loop
 MainLoop SUBROUTINE
@@ -268,7 +294,7 @@ MLV SUBROUTINE
 .kern1
     STA WSYNC
     CPY #50
-    BNE .noty
+    BCS .noty
     LDA RAND
     STA P0GR
 .noty
@@ -277,7 +303,7 @@ MLV SUBROUTINE
     BNE .kern1
 
     JSR EOS
-	JMP     MLV
+	JMP MLV
     
     
 ; basic loop with vpos top and bottom
@@ -291,20 +317,51 @@ MLV2 SUBROUTINE
 .no2
     LDA #0
     STA P0GR
+    STA P0Line
+    INC P0YPos+1
+    LDA P0YPos+1
+    AND #$40
+    BEQ .nonot
+    LDA P0YPos+1
+    EOR #$3f
+    JMP .pastthis
+.nonot
+    LDA P0YPos+1
+.pastthis
+    AND #$3f
+    SEC
+    ADC #16
+    STA P0YPos
+    
+    
+    INC P0XPos+1
+    LDA P0XPos+1
+    AND #$7f
+    ;LDA #50
+    LDX #0
+    JSR P0SetPos
     
     JSR WaitUnderscan
 .kern1
     STA WSYNC
-    CPY #50
+
+    LDA P0Line
+    CMP #0
+    BEQ .noton
+    DEC P0Line
     BNE .noty
+    LDA #0
+    STA P0GR
+   
+.noton
+    CPY P0YPos
+    BNE .noty
+    LDA #8
+    STA P0Line
     LDA RAND
     STA P0GR
 .noty
-    CPY #40
-    BNE .notbottom
-    LDA #0
-    STA P0GR
-.notbottom
+
     STA WSYNC
     DEY
     BNE .kern1
