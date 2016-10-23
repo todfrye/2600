@@ -129,7 +129,6 @@ P0Line  DS 1
 P0XPos  DS 6
 P0YPos  DS 6
 
-
 P1Idx   DS 1
 P1Vect  DS 2
 P1Tmp
@@ -358,7 +357,7 @@ MLV2 SUBROUTINE
     BNE .noty
     LDA #8
     STA P0Line
-    LDA RAND
+    LDA #$ff
     STA P0GR
 .noty
 
@@ -370,7 +369,70 @@ MLV2 SUBROUTINE
 	JMP     MLV2
     
 
+    
+    
+; basic loop with vpos top and bottom
+MLV3 SUBROUTINE
+    JSR BASIC_FRAME
 
+    LDA     BUTTONNOW
+    AND #2
+    BEQ     .no2
+    JMP ML1
+.no2
+    LDA #0
+    STA P0GR
+    STA P0Line
+    INC P0YPos+1
+    LDA P0YPos+1
+    AND #$40
+    BEQ .nonot
+    LDA P0YPos+1
+    EOR #$3f
+    JMP .pastthis
+.nonot
+    LDA P0YPos+1
+.pastthis
+    AND #$3f
+    SEC
+    ADC #16
+    STA P0YPos
+    
+    
+    INC P0XPos+1
+    LDA P0XPos+1
+    AND #$7f
+    ;LDA #50
+    LDX #0
+    JSR P0SetPos
+    
+    JSR WaitUnderscan
+.kern1
+    STA WSYNC
+
+    LDA P0Line
+    CMP #0
+    BEQ .noton
+    DEC P0Line
+    BNE .noty
+    LDA #0
+    STA P0GR
+   
+.noton
+    CPY P0YPos
+    BNE .noty
+    LDA #8
+    STA P0Line
+    LDA #$ff
+    STA P0GR
+.noty
+
+    STA WSYNC
+    DEY
+    BNE .kern1
+
+    JSR EOS
+	JMP     MLV3
 
 ML1 SUBROUTINE
 
@@ -402,11 +464,14 @@ ML1 SUBROUTINE
 	LDX 	#5
 loop1
 ; player 1
-    lda #4
-    clc
-    adc 	P1XPos,x
+	txa
+	and #1
+	asl
+	ora #1
+	clc
+	adc P1XPos,x
 	cmp #100
-	bcc	.okx   ;blt
+	bcc .okx   ;blt
 	lda #0
 .okx
 
@@ -421,64 +486,49 @@ loop1
     bpl .ok2
     lda #100
 .ok2
-    sta P0XPos,x
-    
+	sta P0XPos,x
+
 	DEX
 	BPL 	loop1
-    
-    .if 0 
-    LDA #6
-    STA P1XPos+5
-    LDA #7
-    STA P1XPos+4
-    LDA #8
-    STA P1XPos+3
-    LDA #3
-    STA P1XPos+2
-    LDA #4
-    STA P1XPos+1
-    LDA #4
-    STA P1XPos+0
-    .endif
-    
 
-    lda #80
+
+	lda #80
 	sta P1YPos+5
-    sta P1YPos+4
-    sta P1YPos+3
-    sta P1YPos+2
-    sta P1YPos+1
-    lda #10
-    sta P1YPos
-    
-    
-    LDA #(P01>>8)
-    STA P0Vect+1
-    
-    LDA #(P11>>8)
-    STA P1Vect+1
+	sta P1YPos+4
+	sta P1YPos+3
+	sta P1YPos+2
+	sta P1YPos+1
+	lda #10
+	sta P1YPos
+
+
+	LDA #(P01>>8)
+	STA P0Vect+1
+
+	LDA #(P11>>8)
+	STA P1Vect+1
 
 	LDA    	P0XPos+5
 	STA	    P0Tmp
-    LDA 	#(P04 & $ff)
-    LDA 	#(P01 & $ff)
+	LDA 	#(P04 & $ff)
+	LDA 	#(P01 & $ff)
 	STA 	P0Vect
-    
-    LDA    	P1XPos+5
+
+	LDA    	P1XPos+5
 	STA	    P1Tmp
-    LDA #(P14 & $ff)
-    STA P1Vect
-    
+	LDA #(P14 & $ff)
+	STA P1Vect
+
 	LDX 	#5
 	STX 	P0Idx
-    STX 	P1Idx
-    
-    JSR WaitUnderscan
+	STX 	P1Idx
+
+	JSR WaitUnderscan
 	JMP (P0Vect)
 
 
 clear
-    LDA  #$24       ;set timer for overscan
+	LDA  #$24       ;set timer for overscan
 	STA  TIM64T
 	LDA  #$02       ;clear the screen and turn off the video
 	STA  WSYNC
